@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>ARC RAIDERS配装材料计算器</title>
+<style>
+body { font-family: sans-serif; max-width: 800px; margin: auto; padding: 2em; }
+table { border-collapse: collapse; width: 100%; margin-top: 1em; }
+th, td { border: 1px solid #ccc; padding: 0.4em 0.6em; text-align: center; }
+button { margin: 0.3em; }
+#output { margin-top: 2em; line-height: 1.8em; }
+#fileInput { margin-left: 10px; }
+.notice { color: gray; font-size: 0.9em; }
+select { padding: 0.3em; }
+</style>
+<script>
+//===========================
+// ✅ 控制哪些分类可以被选中
+//===========================
+const visibleCategories = ["武器","防具","手雷","医疗"]; 
+
+//===========================
+// ✅ 自定义排序顺序（可留空使用字母序）
+//===========================
+const customOrder = ["电棍","高级电子元件",
+  "高级机械零件","中型枪械零件","重型枪械零件", "防腐剂","ARC线圈","机械零件","电子元件","耐磨布料",
+  "弹簧","磁铁","电池","油","小罐","化学品","布料","金属零件","橡胶零件","塑料零件",
+  "ARC合金","高级ARC能量电池","ARC能量电池"
+];
+
+//===========================
+// 初始配方与分类
+//===========================
+let recipes = {
+  "一坨子弹": { "金属零件": 3, "化学品": 2,  "_category": "武器" },
+  "水壶": { "金属零件": 6, "橡胶零件": 8, "_category": "武器" },
+  "钉机": { "金属零件": 8, "橡胶零件": 4, "_category": "武器" },
+  "生铁": { "金属零件": 5, "橡胶零件": 2, "_category": "武器" },
+  "响尾蛇": { "金属零件": 16, "橡胶零件": 12, "_category": "武器" },
+  "响尾蛇IV": { "金属零件": 16, "橡胶零件": 12,"简易枪械零件": 2, "机械零件": 5, "_category": "武器" },
+  "铁砧": { "简易枪械零件": 6, "机械零件": 5, "_category": "武器" },
+  "公牛": { "简易枪械零件": 6, "机械零件": 5, "_category": "武器" },
+  "三连奏": { "简易枪械零件": 6, "机械零件": 6, "_category": "武器" },
+  "喜歌剧": { "简易枪械零件": 3, "机械零件": 3, "_category": "武器" },
+  "奔流": { "中型枪械零件": 3, "高级机械零件": 2, "弹簧": 6, "_category": "武器" },
+  "复仇者": { "中型枪械零件": 2, "高级机械零件": 2, "磁铁": 5, "_category": "武器" },
+  "复仇者IV": { "中型枪械零件": 8, "高级机械零件": 6, "磁铁": 5, "_category": "武器" },
+  "叛逆": { "中型枪械零件": 3, "高级机械零件": 2, "油": 5, "_category": "武器" },
+  "鱼鹰": { "中型枪械零件": 3, "高级机械零件": 2, "电线": 7, "_category": "武器" },
+  "贝蒂娜": { "重型枪械零件": 3, "高级机械零件": 3, "小罐": 3, "_category": "武器" },
+
+  "冲击手雷": { "化学品": 3, "塑料零件": 2, "_category": "手雷" },
+  "闪爆手雷": { "炸药": 2, "磁铁": 1, "_category": "手雷" },
+  "碎片手雷": { "炸药": 1, "弹簧": 2, "_category": "手雷" },
+  "触发式手雷": { "炸药": 2, "处理器": 1, "_category": "手雷" },
+  "重引信手雷": { "炸药混合物": 1, "小罐": 2, "_category": "手雷" },
+  "电击地雷": { "电子元件": 1, "电池": 1, "_category": "手雷" },
+
+  "绷带": { "布料": 5,"_category": "医疗" },
+  "护盾充能器": { "橡胶零件": 5, "ARC能量电池": 1,"_category": "医疗" },
+  "草药绷带": { "耐磨布料": 1, "大毛蕊花": 1,  "_category": "医疗" },
+  "消毒绷带": { "耐磨布料": 2, "防腐剂": 1,  "_category": "医疗" },
+  "爆能护盾充能器": { "电子元件": 2, "高级ARC能量电池": 1,  "_category": "医疗" },
+  
+
+  "绿色强化": { "塑料零件": 6, "橡胶零件": 6,  "_category": "防具" },
+  "轻型护盾": { "ARC合金": 2, "塑料零件": 4,  "_category": "防具" },
+  "蓝色强化": { "电子元件": 2, "磁铁": 3,  "_category": "防具" },
+  "中型护盾": { "ARC线圈": 1, "电池": 4,  "_category": "防具" },
+  "粉色强化": { "高级电子元件": 2, "处理器": 3,  "_category": "防具" },
+  "重型护盾": { "电棍": 1, "变电器": 2,  "_category": "防具" },
+
+  "中型枪械零件": { "简易枪械零件": 4, "_category": "零件" },
+  "重型枪械零件": { "简易枪械零件": 4, "_category": "零件" },
+  "ARC线圈": { "ARC合金": 6, "_category": "零件" },
+
+
+  "电棍": { "高级电子元件": 2, "ARC线圈": 2, "_category": "零件" },
+  "高级机械零件": { "机械零件": 2, "弹簧": 2, "_category": "零件" },
+  "高级电子元件": { "导线": 3, "电子元件": 2, "_category": "零件" },
+  "防腐剂": { "化学品":10, "大毛蕊花": 2, "_category": "零件" },
+  "机械零件": { "金属零件": 7, "橡胶零件": 3, "_category": "零件" },
+  "电子元件": { "塑料零件": 8, "橡胶零件": 4, "_category": "零件" },
+  "耐磨布料": { "布料": 14, "_category": "零件" },
+};
+
+//===========================
+// 递归分解函数
+//===========================
+function decompose(product, amount, raw, intermediates) {
+  if (!recipes[product] || Object.keys(recipes[product]).length === 1 && recipes[product]._category) {
+    raw[product] = (raw[product] || 0) + amount;
+    return;
+  }
+  intermediates[product] = (intermediates[product] || 0) + amount;
+  for (const [mat, qty] of Object.entries(recipes[product])) {
+    if (mat === "_category") continue;
+    decompose(mat, qty * amount, raw, intermediates);
+  }
+}
+
+//===========================
+// 分类 → 产品映射
+//===========================
+function getCategoryMap() {
+  const map = {};
+  for (const [name, data] of Object.entries(recipes)) {
+    const cat = data._category || "未分类";
+    if (!map[cat]) map[cat] = [];
+    map[cat].push(name);
+  }
+  return map;
+}
+
+//===========================
+// 添加产品行
+//===========================
+function addRow(defaultCat, defaultProd, defaultCount=1) {
+  const tbody = document.getElementById("products");
+  const row = document.createElement("tr");
+
+  // 分类选择
+  const catCell = document.createElement("td");
+  const catSelect = document.createElement("select");
+  const catMap = getCategoryMap();
+
+  for (const cat of Object.keys(catMap)) {
+    if (visibleCategories && !visibleCategories.includes(cat)) continue;
+    const opt = document.createElement("option");
+    opt.value = cat;
+    opt.textContent = cat;
+    catSelect.appendChild(opt);
+  }
+  catCell.appendChild(catSelect);
+
+  // 产品选择
+  const productCell = document.createElement("td");
+  const prodSelect = document.createElement("select");
+  updateProductOptions(prodSelect, catSelect.value);
+  productCell.appendChild(prodSelect);
+
+  // 数量输入
+  const countCell = document.createElement("td");
+  const input = document.createElement("input");
+  input.type = "number";
+  input.value = defaultCount;
+  input.min = 1;
+  input.style.width = "60px";
+  countCell.appendChild(input);
+
+  // 删除按钮
+  const delCell = document.createElement("td");
+  const delBtn = document.createElement("button");
+  delBtn.textContent = "删除";
+  delBtn.onclick = () => row.remove();
+  delCell.appendChild(delBtn);
+
+  // 分类切换时更新产品列表
+  catSelect.onchange = () => updateProductOptions(prodSelect, catSelect.value);
+
+  row.appendChild(catCell);
+  row.appendChild(productCell);
+  row.appendChild(countCell);
+  row.appendChild(delCell);
+  tbody.appendChild(row);
+
+  // ✅ 默认值设置
+  if (defaultCat) catSelect.value = defaultCat;
+  updateProductOptions(prodSelect, catSelect.value);
+  if (defaultProd) prodSelect.value = defaultProd;
+}
+
+//===========================
+// 更新某个分类的产品选项
+//===========================
+function updateProductOptions(selectElement, category) {
+  selectElement.innerHTML = "";
+  const map = getCategoryMap();
+  const list = map[category] || [];
+  for (const p of list) {
+    const opt = document.createElement("option");
+    opt.value = p;
+    opt.textContent = p;
+    selectElement.appendChild(opt);
+  }
+}
+
+//===========================
+// 按自定义顺序排序
+//===========================
+function sortByCustomOrder(obj) {
+  const entries = Object.entries(obj);
+  return entries.sort(([a], [b]) => {
+    if (customOrder.length) {
+      const ia = customOrder.indexOf(a);
+      const ib = customOrder.indexOf(b);
+      if (ia === -1 && ib === -1) return a.localeCompare(b);
+      if (ia === -1) return 1;
+      if (ib === -1) return -1;
+      return ia - ib;
+    }
+    return a.localeCompare(b);
+  });
+}
+
+//===========================
+// 计算所有产品
+//===========================
+function calculateAll() {
+  const rows = document.querySelectorAll("#products tr");
+  const raw = {};
+  const intermediates = {};
+  const selectedProducts = [];
+
+  rows.forEach(row => {
+    const product = row.querySelectorAll("select")[1].value;
+    const count = parseInt(row.querySelector("input").value);
+    selectedProducts.push(product);
+    decompose(product, count, raw, intermediates);
+  });
+
+  // ✅ 从中间产品中移除所有最终目标产品
+  for (const p of selectedProducts) delete intermediates[p];
+
+  // ✅ 排序输出
+  const sortedInter = sortByCustomOrder(intermediates);
+  const sortedRaw = sortByCustomOrder(raw);
+
+  let interHTML = "<h3>中间产品：</h3>";
+  if (!sortedInter.length) interHTML += "无";
+  else interHTML += sortedInter.map(([k,v]) => `${k} ×${v}`).join("<br>");
+
+  let rawHTML = "<h3>原料需求：</h3>";
+  if (!sortedRaw.length) rawHTML += "无";
+  else rawHTML += sortedRaw.map(([k,v]) => `${k} ×${v}`).join("<br>");
+
+  document.getElementById("output").innerHTML = interHTML + "<br><br>" + rawHTML;
+}
+
+//===========================
+// 导入 JSON 文件
+//===========================
+function handleFile(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (typeof data !== 'object' || Array.isArray(data)) {
+        alert("❌ 文件格式错误，应为 { 产品名: { 原料: 数量, _category: '分类' } }");
+        return;
+      }
+      recipes = data;
+      alert("✅ 配方文件导入成功！");
+      document.querySelectorAll("#products").forEach(el => el.innerHTML = "");
+    } catch (err) {
+      alert("❌ 解析失败：" + err.message);
+    }
+  };
+  reader.readAsText(file);
+}
+</script>
+</head>
+
+<body>
+<h2>ARC RAIDERS配装材料计算器</h2>
+
+<div>
+  <button onclick="addRow()">＋ 添加产品</button>
+  <button onclick="calculateAll()">计算合计</button>
+  <label>导入配方 JSON：</label>
+  <input type="file" id="fileInput" accept=".json" onchange="handleFile(event)">
+  <div class="notice">
+    仅显示以下分类：<b id="catList"></b><br>
+    文件格式示例：{"机枪":{"中型枪械零件":2,"高级机械零件":1,"弹簧":3,"_category":"武器"}}
+  </div>
+</div>
+
+<table>
+<thead><tr><th>分类</th><th>产品</th><th>数量</th><th>操作</th></tr></thead>
+<tbody id="products"></tbody>
+</table>
+
+<div id="output"></div>
+
+<script>
+document.getElementById("catList").textContent = visibleCategories ? visibleCategories.join(", ") : "（全部分类）";
+
+// ✅ 默认初始行
+addRow("防具","绿色强化");
+addRow("防具","轻型护盾");
+addRow("武器","水壶");
+addRow("武器","生铁");
+addRow("武器","一坨子弹",4);
+addRow("医疗","绷带",5);
+addRow("医疗","护盾充能器",3);
+</script>
+</body>
+</html>
